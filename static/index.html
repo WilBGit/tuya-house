@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tuya House</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --card: #1a1a2e;
+    --accent: #e94560;
+    --text: #eee;
+    --muted: #888;
+    --green: #4ecca3;
+    --border: #333;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+  }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .cmd-box {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .cmd-box input {
+    flex: 1; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--card);
+    color: var(--text); font-size: 16px; outline: none;
+  }
+  .cmd-box input:focus { border-color: var(--accent); }
+  .cmd-box button {
+    padding: 14px 20px; border-radius: 12px; border: none;
+    background: var(--accent); color: #fff; font-size: 16px;
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .cmd-box button:active { opacity: 0.8; }
+  .quick-btns {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+  }
+  .quick-btns button {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-size: 13px; cursor: pointer;
+  }
+  .quick-btns button:active { background: var(--accent); border-color: var(--accent); }
+  .devices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .device-card {
+    background: var(--card); border-radius: 12px; padding: 14px;
+    border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;
+  }
+  .device-card.on { border-color: var(--green); }
+  .device-card .name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .device-card .type { font-size: 11px; color: var(--muted); }
+  .device-card .state { font-size: 11px; margin-top: 6px; color: var(--green); }
+  .response {
+    margin-top: 16px; padding: 12px 16px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--border);
+    font-size: 14px; min-height: 20px;
+  }
+  .response.ok { border-color: var(--green); }
+  .response.err { border-color: var(--accent); }
+  @media (max-width: 400px) {
+    .devices { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<h1>🏠 Tuya House</h1>
+<p class="subtitle">Type any command — English, Vietnamese, any language</p>
+
+<div class="cmd-box">
+  <input id="cmd" type="text" placeholder="bật đèn Room 2 / turn on fireplace..." autofocus>
+  <button onclick="sendCmd()">Go</button>
+</div>
+
+<div class="quick-btns">
+  <button onclick="quick('turn on Room 2')">Room 2 ON</button>
+  <button onclick="quick('turn off Room 2')">Room 2 OFF</button>
+  <button onclick="quick('set Room 2 to blue')">🔵</button>
+  <button onclick="quick('set Room 2 to red')">🔴</button>
+  <button onclick="quick('set Room 2 to white')">⚪</button>
+  <button onclick="quick('turn on Fireplace')">🔥 ON</button>
+  <button onclick="quick('turn on Fan')">Fan ON</button>
+  <button onclick="quick('turn off Fan')">Fan OFF</button>
+  <button onclick="quick('turn on Living Room AC')">AC ON</button>
+  <button onclick="quick('set Living Room AC to 72 degrees')">AC 72°</button>
+  <button onclick="quick('turn off everything')">ALL OFF</button>
+</div>
+
+<div id="devices" class="devices"></div>
+<div id="response" class="response" style="display:none"></div>
+
+<script>
+const API = window.location.origin;
+
+async function sendCmd() {
+  const input = document.getElementById('cmd');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const res = await fetch(API + '/command', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text})
+  });
+  const data = await res.json();
+  showResponse(data);
+  loadDevices();
+}
+
+function quick(text) {
+  document.getElementById('cmd').value = text;
+  sendCmd();
+}
+
+function showResponse(data) {
+  const el = document.getElementById('response');
+  el.style.display = 'block';
+  if (data.result && data.result.success) {
+    el.className = 'response ok';
+    el.textContent = '✅ ' + (data.result.device ? data.result.device + ': ' : '') + data.result.action;
+  } else {
+    el.className = 'response err';
+    el.textContent = '❌ ' + (data.error || data.result?.error || 'Something went wrong');
+  }
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+async function loadDevices() {
+  const res = await fetch(API + '/devices');
+  const devices = await res.json();
+  const container = document.getElementById('devices');
+  container.innerHTML = '';
+  for (const d of devices) {
+    const card = document.createElement('div');
+    card.className = 'device-card';
+    card.innerHTML = `<div class="name">${d.name}</div><div class="type">${d.type}</div>`;
+    card.onclick = () => { document.getElementById('cmd').value = 'toggle ' + d.name; sendCmd(); };
+    // Fetch status
+    fetch(API + '/status/' + encodeURIComponent(d.name))
+      .then(r => r.json())
+      .then(data => {
+        if (data.status) {
+          const result = data.status.result || data.status;
+          let on = '?';
+          if (Array.isArray(result)) {
+            const dps = {};
+            result.forEach(s => { if (s.code) dps[s.code] = s.value; });
+            on = dps.switch_led ?? dps.switch ?? dps.switch_1 ?? '?';
+          }
+          card.className = 'device-card' + (on === true || on === true ? ' on' : '');
+          const stateEl = document.createElement('div');
+          stateEl.className = 'state';
+          stateEl.textContent = on === true ? 'ON' : on === false ? 'OFF' : '';
+          card.appendChild(stateEl);
+        }
+      });
+    container.appendChild(card);
+  }
+}
+
+document.getElementById('cmd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendCmd();
+});
+
+loadDevices();
+</script>
+</body>
+</html>
