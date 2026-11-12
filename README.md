@@ -1,7 +1,5 @@
 # Tuya House Smart Home Controller
 
-[![CI](https://github.com/WilBGit/tuya-house/actions/workflows/ci.yml/badge.svg)](https://github.com/WilBGit/tuya-house/actions/workflows/ci.yml)
-
 Tuya House is a local FastAPI service for controlling a home full of Tuya and Smart Life devices through natural-language commands. It supports common English and Vietnamese commands, optional LLM intent parsing, and an Alexa Custom Skill integration.
 
 ## Features
