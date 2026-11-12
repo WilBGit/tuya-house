@@ -37,4 +37,4 @@ The Alexa endpoint is intended for a separately configured HTTPS endpoint. Tempo
 
 Text or voice command → FastAPI → rule parser or optional LLM parser → validated intent → Tuya Cloud API → device.
 
-This repository is a private application source publication. It does not include a production deployment, cloud credentials, Alexa account state, or an unattended remote-control authorization.
+This repository is a sanitized application source publication. It does not include a production deployment, cloud credentials, Alexa account state, or an unattended remote-control authorization.
